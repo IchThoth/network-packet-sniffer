@@ -2,6 +2,17 @@ import struct
 import socket
 import textwrap
 
+
+
+
+def main(): 
+    conn = socket.socket(socket.AF_PACKET,socket.SOCK_RAW, socket.ntohs(3))
+    while True: 
+        raw_data, addr = conn.recvfrom(65536)
+        dest_mac, sender_mac, ethernet_protocol, data = ethernet_wrap(raw_data)
+        print('\nEthernet Frame:')
+        print('Destination: {}, Source:{}, Protocol:{}',format( dest_mac, sender_mac, ethernet_protocol))
+
 #get ethernet frame
 #recever 6 bytes -->
 #sender 6 bytes --> BROADCAAST ADDRESS = FF:FF:FF:FF:FF:FF                                      {ETHERNET MAC ADDRESSES}
@@ -15,6 +26,7 @@ import textwrap
 #               0x86DD = IPv6 FRAME 
 #
 # PAYLOAD (IP/ARP frame + padding) = 46byte - 1500byte
+# CRC 6 bytes
                 
 def ethernet_wrap(data):
     dest_mac_addr,sender_mac_addr, proto = struct.unpack('! 6s 6s H', data[:14])
@@ -26,5 +38,17 @@ def format_mac_addr(addr) :
     mac_addr = ':'.join(bytes_str).upper()
     return mac_addr
 
+def ipv4_packet_unpack(data):
+    version_header_length = data[0]
 
+    # bit shift the version header by 4
+    version = version_header_length >> 4
+    header_length = (version_header_length & 15) * 4
+    ttl, proto, src, target = struct.unpack('! 8x B B 2x 4s 4s',data[:20])
+    return version, ttl, proto, format_ipv4(src), format_ipv4(target), data[header_length:]
 
+#i.e 192.162.89.0 this may or may not be my PCs ip address :) 
+def format_ipv4(addr):
+    return '.'.join(map(str,addr))
+
+main()
